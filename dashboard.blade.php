@@ -323,24 +323,24 @@
   <!-- Summary Section -->
   <div class="form-summary">
     <div class="summary-card">
-      <p>Total Forms</p>
-      <h2>{{ $totalForms }}</h2>
+        <p>Total Forms</p>
+        <h2>{{ $formSummaryCounts->total_forms }}</h2>
     </div>
     <div class="summary-card">
-      <p>ICS Form</p>
-      <h2>{{ $icsForms }}</h2>
+        <p>ICS Form</p>
+        <h2>{{ $formSummaryCounts->ics_forms }}</h2>
     </div>
     <div class="summary-card">
-      <p>PAR Form</p>
-      <h2>{{ $parForms }}</h2>
+        <p>PAR Form</p>
+        <h2>{{ $formSummaryCounts->par_forms }}</h2>
     </div>
     <div class="summary-card">
-      <p>Active</p>
-      <h2>{{ $activeForms }}</h2>
+        <p>Active</p>
+        <h2>{{ $formSummaryCounts->active_forms }}</h2>
     </div>
     <div class="summary-card">
-      <p>Archive</p>
-      <h2>{{ $archivedForms }}</h2>
+        <p>Archive</p>
+        <h2>{{ $formSummaryCounts->archived_forms }}</h2>
     </div>
 </div>
 
@@ -721,88 +721,58 @@ async function loadAvailableSerials(propertyNo = '') {
    SUBMIT FORM (AJAX)
 ============================ */
 async function submitForm(e) {
-  e.preventDefault();
+    e.preventDefault();
 
-  const studentName = studentSearch.value.trim();
-  if (!studentName) return alert('Please select a student');
+    const studentName = document.getElementById('studentSearch').value.trim();
+    const referenceNo = document.getElementById('referenceNo').value.trim();
+    const issuedDate = document.getElementById('issuedDate').value;
+    const returnDate = document.getElementById('returnDate').value;
+    const formType = document.getElementById('form_type_input').value;
 
-  const checked = Array.from(document.querySelectorAll('.serial-checkbox:checked'))
-                       .map(cb => cb.dataset.serial);
-  if (!checked.length) return alert('Please choose at least one serial');
+    const checkedSerials = Array.from(document.querySelectorAll('.serial-checkbox:checked'))
+                                .map(cb => cb.dataset.serial);
 
-  const payload = {
-    student_name: studentName,
-    selected_serials: checked,
-    form_type: document.getElementById('form_type_input').value,
-    issued_date: document.getElementById('issuedDate').value,
-    return_date: document.getElementById('returnDate').value,
-    reference_no: referenceNo.value.trim()
-  };
-
-  if (!payload.issued_date || !payload.reference_no)
-      return alert('Fill required fields');
-
-  if (refCheck.style.display !== 'none')
-      return alert('Reference exists');
-
-  try {
-    const res = await fetch('/issued/store', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    // If Laravel returns validation errors (422)
-    if (res.status === 422) {
-      const err = await res.json();
-      let msg = "Validation failed:\n";
-      for (const key in err.errors) {
-        msg += "- " + err.errors[key][0] + "\n";
-      }
-      return alert(msg);
+    if (!studentName || !referenceNo || !issuedDate || !checkedSerials.length) {
+        return alert('Please fill all required fields and select at least one serial.');
     }
 
-    const json = await res.json();
+    const refCheck = document.getElementById('refCheck');
+    if (refCheck.style.display !== 'none') return alert('Reference number already exists.');
 
-    // Backend returned but not successful
-    if (!json.success) {
-      return alert(json.message || "Failed to save");
+    const payload = {
+        student_name: studentName,
+        selected_serials: checkedSerials,
+        form_type: formType,
+        issued_date: issuedDate,
+        return_date: returnDate,
+        reference_no: referenceNo
+    };
+
+    try {
+        const res = await fetch('/issued/store', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const json = await res.json();
+
+        if (!json.success) {
+            return alert(json.message || 'Failed to save form');
+        }
+
+        alert('Form saved successfully!');
+        closeAddFormModal();
+        window.location.reload();
+
+    } catch (err) {
+        console.error(err);
+        alert('Unexpected error saving form: ' + err.message);
     }
-
-    // ---- SUCCESS ----
-    loadAvailableSerials();
-    appendFormRecordToTable(json.data);
-    alert('Form saved successfully!');
-    closeAddFormModal();
-
-  } catch (err) {
-    console.error(err);
-    alert('Unexpected error saving form');
-  }
-}
-
-
-function appendFormRecordToTable(data) {
-  const tbody = document.querySelector('.form-table tbody');
-  if (!tbody) return;
-
-  data.selected_serials.forEach(serial => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${data.form_type}</td>
-      <td>${data.reference_no}</td>
-      <td>${data.issued_date}</td>
-      <td>${data.student_name}</td>
-      <td>1</td>
-      <td class="status active">Active</td>
-      <td><a href="#">View</a> | <a href="#">Print</a></td>
-    `;
-    tbody.prepend(tr);
-  });
 }
 
 /* ============================
