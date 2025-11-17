@@ -324,25 +324,25 @@
   <div class="form-summary">
     <div class="summary-card">
       <p>Total Forms</p>
-      <h2>124</h2>
+      <h2>{{ $totalForms }}</h2>
     </div>
     <div class="summary-card">
       <p>ICS Form</p>
-      <h2>88</h2>
+      <h2>{{ $icsForms }}</h2>
     </div>
     <div class="summary-card">
       <p>PAR Form</p>
-      <h2>36</h2>
+      <h2>{{ $parForms }}</h2>
     </div>
     <div class="summary-card">
       <p>Active</p>
-      <h2>22</h2>
+      <h2>{{ $activeForms }}</h2>
     </div>
     <div class="summary-card">
       <p>Archive</p>
-      <h2>102</h2>
+      <h2>{{ $archivedForms }}</h2>
     </div>
-  </div>
+</div>
 
   <!-- FORM SECTION --> 
   <div class="form-controls">
@@ -367,16 +367,20 @@
       <tbody>
         @foreach($issuedForms as $form)
         <tr>
-          <td>{{ $form->form_type }}</td>
-          <td>{{ $form->reference_no }}</td>
-          <td>{{ \Carbon\Carbon::parse($form->created_at)->format('F d, Y') }}</td>
-          <td>{{ $form->student_name }}</td>
-          <td>{{ $form->item_count }}</td>
-          <td>{{ $form->status }}</td>
-          <td><a href="#">View</a> | <a href="#">Print</a></td>
+            <td>{{ $form->form_type }}</td>
+            <td>{{ $form->reference_no }}</td>
+            <td>{{ \Carbon\Carbon::parse($form->created_at)->format('F d, Y') }}</td>
+            <td>{{ $form->student_name }}</td>
+            <td>{{ $form->item_count }}</td>
+            <td>
+                <span class="status {{ strtolower($form->status) }}">
+                    {{ $form->status }}
+                </span>
+            </td>
+            <td><a href="#">View</a> | <a href="#">Print</a></td>
         </tr>
         @endforeach
-      </tbody>
+    </tbody>
     </table>
   </div>
 
