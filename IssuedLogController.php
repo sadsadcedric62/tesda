@@ -55,8 +55,8 @@ class IssuedLogController extends Controller
      */
     public function checkReference($reference)
     {
-        // Check in issued_log table
-        $exists = DB::table('issued_log')
+        // Check in issued_summary table only
+        $exists = DB::table('issued_summary')
             ->where('reference_no', $reference)
             ->exists();
 
@@ -75,77 +75,73 @@ class IssuedLogController extends Controller
         'form_type' => ['required', Rule::in(['ICS','PAR'])],
         'issued_date' => 'required|date',
         'return_date' => 'nullable|date|after_or_equal:issued_date',
-        'reference_no' => 'required|string|unique:issued_log,reference_no',
+        'reference_no' => 'required|string|unique:issued_summary,reference_no',
     ]);
 
     $issuedDate = Carbon::parse($data['issued_date'])->toDateString();
-    $returnDate = $data['return_date']
-        ? Carbon::parse($data['return_date'])->toDateString()
-        : null;
+    $returnDate = $data['return_date'] ? Carbon::parse($data['return_date'])->toDateString() : null;
 
-    $insertedIds = [];
+    DB::beginTransaction();
+    try {
+        $propertyNos = [];
 
-    // Insert each serial into issued_log
-    foreach ($data['selected_serials'] as $serial) {
-        $tool = DB::table('tools')->where('serial_no', $serial)->first();
-        $propertyNo = $tool ? $tool->property_no : null;
+        foreach ($data['selected_serials'] as $serial) {
+            $tool = DB::table('tools')->where('serial_no', $serial)->first();
 
-        $id = DB::table('issued_log')->insertGetId([
-            'student_name' => $data['student_name'],
-            'serial_no' => $serial,
-            'property_no' => $propertyNo,
+            if (!$tool) {
+                throw new \Exception("Serial number {$serial} not found.");
+            }
+
+            $propertyNo = $tool->property_no;
+            $propertyNos[] = $propertyNo;
+
+            // Insert into issued_log
+            DB::table('issued_log')->insert([
+                'student_name' => $data['student_name'],
+                'serial_no' => $serial,
+                'property_no' => $propertyNo,
+                'form_type' => $data['form_type'],
+                'issued_date' => $issuedDate,
+                'return_date' => $returnDate,
+                'reference_no' => $data['reference_no'],
+            ]);
+
+            // Update tool status and usage_count safely
+            DB::table('tools')->where('serial_no', $serial)
+                ->update([
+                    'status' => 'Issued',
+                    'usage_count' => DB::raw('COALESCE(usage_count, 0) + 1'),
+                    'updated_at' => now()
+                ]);
+        }
+
+        // Insert into issued_summary
+        DB::table('issued_summary')->insert([
             'form_type' => $data['form_type'],
-            'issued_date' => $issuedDate,
-            'return_date' => $returnDate,
+            'student_name' => $data['student_name'],
+            'item_count' => count($data['selected_serials']),
+            'status' => 'Active',
             'reference_no' => $data['reference_no'],
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
-        $insertedIds[] = $id;
+        DB::commit();
 
-        // Update tool status
-        if ($tool) {
-            DB::table('tools')->where('serial_no', $serial)->update([
-                'status' => 'Issued',
-                'updated_at' => now()
-            ]);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Form saved successfully',
+            'data' => $data,
+            'property_nos' => $propertyNos
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('IssuedLog store error: '.$e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Server error: '.$e->getMessage()
+        ], 500);
     }
-
-    // Create summary in issued_summary table
-    DB::table('issued_summary')->insert([
-        'form_type' => $data['form_type'],
-        'student_name' => $data['student_name'],
-        'item_count' => count($data['selected_serials']), // total items issued
-        'status' => 'Active',
-        'created_at' => now(),
-        'updated_at' => now(),
-    ]);
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Issued log and summary created successfully',
-        'inserted' => $insertedIds,
-        'data' => [
-            'student_name' => $data['student_name'],
-            'selected_serials' => $data['selected_serials'],
-            'form_type' => $data['form_type'],
-            'issued_date' => $issuedDate,
-            'return_date' => $returnDate,
-            'reference_no' => $data['reference_no'],
-        ]
-    ]);
 }
-
-
-    /**
-     * Show all Form Records from issued_summary
-     */
-    public function indexForms()
-    {
-        $issuedForms = DB::table('issued_summary')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return view('form_records', compact('issuedForms'));
-    }
 }
