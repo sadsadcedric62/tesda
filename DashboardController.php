@@ -14,8 +14,12 @@ class DashboardController extends Controller
         $availableItems = DB::table('tools')->where('status', 'Available')->count();
         $issuedItems = DB::table('tools')->where('status', 'Borrowed')->count();
         $forRepair = DB::table('tools')->whereIn('status', ['For Repair', 'Damaged'])->count();
+
         $lowStockThreshold = 5;
-        $lowStock = DB::table('property_inventory')->where('quantity', '<', $lowStockThreshold)->count();
+        $lowStock = DB::table('property_inventory')
+            ->where('quantity', '<', $lowStockThreshold)
+            ->count();
+
         $missingItems = DB::table('tools')->where('status', 'Lost')->count();
 
         $inventory = DB::table('tools')
@@ -27,55 +31,35 @@ class DashboardController extends Controller
             )
             ->get();
 
-        
         // ---------- Form Records Data ----------
-$issuedForms = DB::table('issued_summary as s')
-    ->leftJoin('issued_log as l', function($join) {
-        $join->on('s.student_name', '=', 'l.student_name')
-             ->on('s.form_type', '=', 'l.form_type');
-    })
-    ->select(
-        's.id',
-        's.form_type',
-        DB::raw('GROUP_CONCAT(DISTINCT l.reference_no) as reference_no'),
-        's.created_at',
-        's.student_name',
-        's.item_count',
-        's.status'
-    )
-    ->groupBy(
-        's.id',
-        's.form_type',
-        's.created_at',
-        's.student_name',
-        's.item_count',
-        's.status'
-    )
-    ->orderBy('s.created_at', 'desc')
-    ->get();
+        // Your issued_summary now contains reference_no — so only select from issued_summary!
+        $issuedForms = DB::table('issued_summary')
+            ->select('id', 'form_type', 'reference_no', 'created_at', 'student_name', 'item_count', 'status')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-// ---------- Form Summary Counts ----------
-$totalForms = $issuedForms->count();
-$icsForms = $issuedForms->where('form_type', 'ICS')->count();
-$parForms = $issuedForms->where('form_type', 'PAR')->count();
-$activeForms = $issuedForms->where('status', 'Active')->count();
-$archivedForms = $issuedForms->where('status', 'Archived')->count();
+        // ---------- Form Summary Counts ----------
+        $formSummaryCounts = DB::table('issued_summary')
+            ->select(
+                DB::raw('COUNT(*) as total_forms'),
+                DB::raw("SUM(form_type = 'ICS') as ics_forms"),
+                DB::raw("SUM(form_type = 'PAR') as par_forms"),
+                DB::raw("SUM(status = 'Active') as active_forms"),
+                DB::raw("SUM(status = 'Archived') as archived_forms")
+            )
+            ->first();
 
-// ---------- Return view ----------
-return view('dashboard', compact(
-    'totalTools',
-    'availableItems',
-    'issuedItems',
-    'forRepair',
-    'lowStock',
-    'missingItems',
-    'inventory',
-    'issuedForms',
-    'totalForms',
-    'icsForms',
-    'parForms',
-    'activeForms',
-    'archivedForms'
-));
+        // ---------- Return view ----------
+        return view('dashboard', compact(
+            'totalTools',
+            'availableItems',
+            'issuedItems',
+            'forRepair',
+            'lowStock',
+            'missingItems',
+            'inventory',
+            'issuedForms',
+            'formSummaryCounts'
+        ));
     }
 }
