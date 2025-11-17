@@ -191,7 +191,6 @@
                 <th>Classification</th>
                 <th>Date Acquired</th>
                 <th>Item Name</th>
-                <th>Quantity</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -202,7 +201,6 @@
                 <td>{{ $item->classification }}</td>
                 <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
                 <td>{{ $item->tool_name }}</td>
-                <td>{{ $item->quantity ?? 0 }}</td>
                 <td class="action-buttons">
                   <button class="edit-btn">✏️</button>
                   <button class="delete-btn">🗑️</button>
@@ -396,7 +394,7 @@
 
 <!-- ====== Add Form Modal (ISSUE FORM) ====== -->
 <div id="addFormModal" class="modal-overlay">
-  <div class="modal-content" style="width: 720px;">
+  <div class="modal-content">
     <span class="close-btn" onclick="closeAddFormModal()">&times;</span>
     <h2 id="addFormTitle" style="text-align:center;color:#004aad;">Add New Form</h2>
 
