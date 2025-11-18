@@ -183,20 +183,24 @@
           <table id="inventoryTable">
             <thead>
               <tr>
+                <th>Serial No.</th>
+                <th>Item Name</th>
                 <th>Sources of Fund</th>
                 <th>Classification</th>
                 <th>Date Acquired</th>
-                <th>Item Name</th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               @foreach ($inventory as $item)
               <tr>
+                <td>{{ $item->serial_no }}</td>
+                <td>{{ $item->tool_name }}</td>
                 <td>{{ $item->source_of_fund }}</td>
                 <td>{{ $item->classification }}</td>
                 <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
-                <td>{{ $item->tool_name }}</td>
+                <td>{{ $item->status }}</td>
                 <td class="action-buttons">
                   <button class="edit-btn">✏️</button>
                   <button class="delete-btn">🗑️</button>
@@ -259,7 +263,7 @@
       <!-- Analytics Overview -->
       <div class="analytics-overview">
         <div class="analytic-card"><h4>Total issued items</h4><p>309</p></div>
-        <div class="analytic-card"><h4>Active issuances</h4><p>60</p></div>
+        <div class="analytic-card"><h4>Active issuances</h4><p>{{ $issuedItems }}</p></div>
         <div class="analytic-card"><h4>Returned items</h4><p>25</p></div>
         <div class="analytic-card"><h4>Overdue items</h4><p>10</p></div>
         <div class="analytic-card"><h4>Permanent issuances</h4><p>25</p></div>
@@ -342,7 +346,10 @@
 
   <!-- FORM SECTION --> 
   <div class="form-controls">
+    
     <button class="sort-btn"><i class="fas fa-filter"></i> Sort by field</button>
+    <input type="text" id="formSearchInput" placeholder="Search student or reference number..."
+           style="padding:8px 12px; border:1px solid #ccc; border-radius:6px; width:300px; margin-left: 350px;">
     <button class="add-btn"><i class="fas fa-plus"></i> Add New Form</button>
   </div>
 
@@ -480,78 +487,82 @@
 // ======== GET DATA FROM CONTROLLER ========
 const usageLabels = @json($usageData->pluck('tool_name'));
 const usageValues = @json($usageData->pluck('total_usage'));
+const issuedLabels = @json($issuedFrequency->pluck('tool_name'));
+const issuedValues = @json($issuedFrequency->pluck('total')).map(Number);
 
-// ======== AUTO-COLOR GENERATOR ========
-function generateColors(count) {
-    let colors = [];
-    for (let i = 0; i < count; i++) {
-        const r = Math.floor(Math.random() * 156) + 100; // 100–255
-        const g = Math.floor(Math.random() * 156) + 100;
-        const b = Math.floor(Math.random() * 156) + 100;
-        colors.push(`rgb(${r}, ${g}, ${b})`);
-    }
-    return colors;
-}
+// ======== GENERATE UNIQUE TOOL NAMES ========
+const toolNames = [...new Set([...usageLabels, ...issuedLabels])];
 
-const barColors = generateColors(usageLabels.length);
+// ======== ASSIGN COLORS CONSISTENTLY ========
+const colorMap = {};
+toolNames.forEach(tool => {
+    const r = Math.floor(Math.random() * 156) + 100;
+    const g = Math.floor(Math.random() * 156) + 100;
+    const b = Math.floor(Math.random() * 156) + 100;
+    colorMap[tool] = `rgb(${r}, ${g}, ${b})`;
+});
 
-// ======== CHART ========
+// ======== USAGE TRENDS BAR CHART ========
+const usageColors = usageLabels.map(tool => colorMap[tool]);
+
 new Chart(document.getElementById("usageChart"), {
     type: "bar",
     data: {
         labels: usageLabels,
-        datasets: [
-            {
-                label: "Total Usage Count",
-                data: usageValues,
-                backgroundColor: barColors,
-                borderWidth: 1
-            }
-        ]
+        datasets: [{
+            label: "Total Usage Count",
+            data: usageValues,
+            backgroundColor: usageColors,
+            borderWidth: 1
+        }]
     },
     options: {
         responsive: true,
-        plugins: {
-            legend: { display: false }
-        },
+        plugins: { legend: { display: false } },
         scales: {
             y: {
                 beginAtZero: true,
                 suggestedMin: 0,
                 suggestedMax: 100,
-                ticks: {
-                    stepSize: 10   // 10, 20, 30, … 100
+                ticks: { stepSize: 10 }
+            }
+        }
+    }
+});
+
+// ======== ISSUED FREQUENCY PIE CHART ========
+const issuedColors = issuedLabels.map(tool => colorMap[tool]);
+
+new Chart(document.getElementById("issuedChart"), {
+    type: "pie",
+    data: {
+        labels: issuedLabels,
+        datasets: [{
+            data: issuedValues,
+            backgroundColor: issuedColors,
+            borderColor: "#fff",
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: "right" },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const value = context.parsed;
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `${context.label}: ${value} (${percentage}%)`;
+                    }
                 }
             }
         }
     }
 });
 
-new Chart(document.getElementById("issuedChart"), {
-  type: "pie",
-  data: {
-    labels: ["Category A", "Category B", "Category C"],
-    datasets: [{
-      data: [50, 30, 20],
-      backgroundColor: ["#004aad", "#2ca02c", "#7c3aed"],
-      borderColor: "#fff",
-      borderWidth: 3
-    }]
-  },
-  options: { plugins: { legend: { position: "right" } }, responsive: true, maintainAspectRatio: false }
-});
-
-new Chart(document.getElementById("issuedItemsChart"), {
-  type: "pie",
-  data: {
-    labels: ["Active", "Returned", "Overdue", "Pending", "Permanent"],
-    datasets: [{
-      data: [60, 25, 10, 15, 25],
-      backgroundColor: ["#123596", "#ff6b6b", "#ffc107", "#20c997", "#6f42c1"]
-    }]
-  },
-  options: { plugins: { legend: { position: "bottom" } } }
-});
 
 /* ============================
    PAGE SWITCHING
@@ -578,9 +589,35 @@ menuLinks.forEach(link => {
 ============================ */
 document.getElementById("inventorySearchInput").addEventListener("keyup", function() {
   const filter = this.value.toLowerCase();
+
   document.querySelectorAll("#inventoryTable tbody tr").forEach(row => {
-    row.style.display = row.cells[3].textContent.toLowerCase().includes(filter) ? "" : "none";
+    const col0 = row.cells[0].textContent.toLowerCase(); // Column 0
+    const col1 = row.cells[1].textContent.toLowerCase(); // Column 1
+
+    const match =
+      col0.includes(filter) ||
+      col1.includes(filter);
+
+    row.style.display = match ? "" : "none";
   });
+});
+
+/* ============================
+   FORM RECORDS SEARCH
+============================ */
+document.getElementById("formSearchInput").addEventListener("keyup", function () {
+    const filter = this.value.toLowerCase();
+
+    document.querySelectorAll(".form-table tbody tr").forEach(row => {
+        const student = row.cells[3].textContent.toLowerCase();  // Issued To
+        const reference = row.cells[1].textContent.toLowerCase(); // Reference No.
+
+        const match =
+            student.includes(filter) ||
+            reference.includes(filter);
+
+        row.style.display = match ? "" : "none";
+    });
 });
 
 /* ============================
