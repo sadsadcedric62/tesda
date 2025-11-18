@@ -51,10 +51,6 @@
       <header class="topbar">
         <h1 id="page-title">Dashboard</h1>
         <div class="right-section">
-          <div class="search-bar">
-            <input type="text" placeholder="Search">
-            <button>🔍</button>
-          </div>
           <div class="icons">
             <span>🔔</span>
             <span>👤</span>
@@ -377,7 +373,7 @@
                     {{ $form->status }}
                 </span>
             </td>
-            <td><a href="#">View</a> | <a href="#">Print</a></td>
+            <td><a href="#">View</a></td>
         </tr>
         @endforeach
     </tbody>
@@ -392,6 +388,18 @@
     <div style="display:flex;gap:20px;justify-content:center;margin-top:20px;">
       <button class="save-btn" id="chooseIcs">ICS</button>
       <button class="save-btn" id="choosePar">PAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== View Form Modal ===== -->
+<div id="viewFormModal" class="modal-overlay" style="display:none;">
+  <div class="modal-content" style="width: 800px;">
+    <span class="close-btn" onclick="closeViewFormModal()">&times;</span>
+    <h2 style="text-align:center;color:#004aad;">Form Details</h2>
+    <div class="modal-body" style="margin-top:20px;"></div>
+    <div style="text-align:center; margin:20px 0;">
+      <button class="save-btn" onclick="printFormModal()">🖨️ Print</button>
     </div>
   </div>
 </div>
@@ -686,35 +694,37 @@ function selectStudent(name) {
    LOAD AVAILABLE SERIALS
 ============================ */
 async function loadAvailableSerials(propertyNo = '') {
-  const container = document.getElementById('serialList');
-  container.innerHTML = '<div class="placeholder">Loading available serials...</div>';
+    const container = document.getElementById('serialList');
+    const formType = document.getElementById('form_type_input').value; // ICS or PAR
+    container.innerHTML = '<div class="placeholder">Loading available serials...</div>';
 
-  try {
-    let url = '/issued/available-serials';
-    if (propertyNo) url += `?property_no=${encodeURIComponent(propertyNo)}`;
-
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    const list = await res.json();
-
-    if (!list.length) {
-      container.innerHTML = '<div class="placeholder">No available items for this property number.</div>';
-      return;
+    if (!propertyNo) {
+        container.innerHTML = '<div class="placeholder">Type a Property No. to see available items.</div>';
+        return;
     }
 
-    container.innerHTML = list.map(item => `
-      <div class="serial-item" onclick="this.querySelector('input').click()">
-        <input type="checkbox" class="serial-checkbox" data-serial="${item.serial_no}" data-property="${item.property_no}">
-        <span>${item.tool_name} ${item.serial_no}</span>
-      </div>
-    `).join('');
+    try {
+        const res = await fetch(`/issued/available-serials?property_no=${encodeURIComponent(propertyNo)}&form_type=${encodeURIComponent(formType)}`);
+        const list = await res.json();
 
-  } catch (err) {
-    console.error(err);
-    container.innerHTML = `<div class="placeholder" style="color:red;">Failed to load serials: ${err.message}</div>`;
-  }
+        if (!list.length) {
+            container.innerHTML = '<div class="placeholder">No available items for this property number.</div>';
+            return;
+        }
+
+        container.innerHTML = list.map(item => `
+            <div class="serial-item" onclick="this.querySelector('input').click()">
+                <input type="checkbox" class="serial-checkbox" data-serial="${item.serial_no}" data-property="${item.property_no}">
+                <span>${item.tool_name} ${item.serial_no} (₱${Number(item.unit_cost).toLocaleString()})</span>
+            </div>
+        `).join('');
+
+    } catch (err) {
+        console.error(err);
+        container.innerHTML = `<div class="placeholder" style="color:red;">Failed to load serials: ${err.message}</div>`;
+    }
 }
+
 
 
 /* ============================
@@ -780,6 +790,187 @@ async function submitForm(e) {
 ============================ */
 document.getElementById('propertyFilter').addEventListener('input', function() {
   loadAvailableSerials(this.value.trim());
+});
+
+// Open View Modal
+function closeViewFormModal() {
+    document.getElementById('viewFormModal').style.display = 'none';
+    document.getElementById('viewFormModal').querySelector('.modal-body').innerHTML = '';
+}
+
+// Attach click event to all "View" links in the form table
+document.querySelectorAll('.form-table tbody tr td a').forEach(link => {
+    if (link.textContent.trim() === 'View') {
+        link.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const row = this.closest('tr');
+            const referenceNo = row.cells[1].textContent.trim();
+            const formType = row.cells[0].textContent.trim(); // <-- GET FORM TYPE HERE
+
+            try {
+                const res = await fetch(`/issued/view/${encodeURIComponent(referenceNo)}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (data.error) return alert(data.error);
+
+                // Group items by property number
+                const grouped = {};
+                data.details.forEach(d => {
+                    if (!grouped[d.property_no]) {
+                        grouped[d.property_no] = {
+                            property_no: d.property_no,
+                            tool_name: d.tool_name,
+                            quantity: 0,
+                            unit_cost: 0,
+                            total_cost: 0,
+                            serials: []
+                        };
+                    }
+                    grouped[d.property_no].quantity += 1;
+                    grouped[d.property_no].unit_cost = Number(d.unit_cost) || 0;
+                    grouped[d.property_no].total_cost += Number(d.unit_cost) || 0;
+                    grouped[d.property_no].serials.push(d.serial_no);
+                });
+
+                // Build modal content WITHOUT signature block
+                let html = `
+                    <br>
+                    <p><strong>Issued To:</strong> <u>${data.issued_to}</u></p>
+                    <p><strong>Reference No.:</strong> <u>${data.reference_no}</u></p>
+                    <table border="1" cellpadding="5" style="width:100%; margin-top:10px;">
+                        <thead>
+                            <tr>
+                                <th>Property Number</th>
+                                <th>Article/Property Name</th>
+                                <th>Quantity</th>
+                                <th>Unit Cost</th>
+                                <th>Total Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                Object.values(grouped).forEach(item => {
+                    html += `<tr>
+                        <td>${item.property_no}</td>
+                        <td>${item.tool_name}</td>
+                        <td>${item.quantity}</td>
+                        <td>${item.unit_cost.toFixed(2)}</td>
+                        <td>${item.total_cost.toFixed(2)}</td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+
+                html += `
+                    <h4 style="margin-top:15px;">Serial Numbers Issued</h4>
+                    <table border="1" cellpadding="5" style="width:100%; margin-top:5px;">
+                        <thead>
+                            <tr>
+                                <th>Property Number</th>
+                                <th>Serial Number</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                data.details.forEach(d => {
+                    html += `<tr>
+                        <td>${d.property_no}</td>
+                        <td>${d.serial_no}</td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+
+                // Add acknowledgement text
+                html += `
+                    <div style="margin-top:30px; font-size:14px; line-height:1.5;">
+                        I hereby acknowledge receipt of the above-listed item(s) and accept full responsibility for their proper use, custody, and maintenance.
+                        I understand that any loss, damage, or misuse of said property will be my liability and may be subject to appropriate administrative or financial action as per government property regulations.
+                    </div>
+                `;
+
+                document.getElementById('viewFormModal').dataset.formType = formType;
+
+                document.getElementById('viewFormModal').querySelector('.modal-body').innerHTML = html;
+                document.getElementById('viewFormModal').style.display = 'flex';
+
+            } catch(err) {
+                console.error(err);
+                alert('Failed to load form details: ' + err.message);
+            }
+        });
+    }
+});
+
+// Print function with proper header and only 2 signatures
+// Print function with proper header and friendly form type names
+function printFormModal() {
+    const modal = document.getElementById('viewFormModal');
+    const modalContent = modal.querySelector('.modal-body').cloneNode(true);
+
+    // Get the form type from the data attribute
+    let formType = modal.dataset.formType || '';
+    if(formType === 'ICS') formType = 'Inventory Custodian Slip (ICS)';
+    if(formType === 'PAR') formType = 'Property Acknowledgement Receipt (PAR)';
+
+    const headerUrl = "{{ url('images/header.png') }}";
+    const referenceNoElem = modalContent.querySelector('p strong');
+    const referenceNo = referenceNoElem ? referenceNoElem.parentElement.textContent.trim() : '';
+
+    const printHTML = `
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+                table, th, td { border: 1px solid #000; }
+                th, td { padding: 6px; text-align: center; }
+                .signature { text-align:center; width:45%; }
+                .signature div { border-bottom:1px solid #000; margin:20px auto 10px auto; width:100%; }
+                .flex { display:flex; justify-content:space-between; margin-top:50px; }
+                
+            </style>
+        </head>
+        <body>
+            <div style="text-align:center;">
+                
+                <div style="font-weight:bold; margin:20px 0; line-height:1.4;">
+                    TESDA<br>
+                    Property and Supply Management Section
+                    ${formType ? `<p style="font-weight:bold; font-size:16px;" margin-top: -20px;>${formType}</p>` : ''}
+                </div>
+    
+            </div>
+
+            <div>${modalContent.innerHTML}</div>
+
+            <div class="flex">
+                <div class="signature">
+                    Issued By:<br>
+                    <div></div>
+                    Signature over printed name<br>
+                    Date: __________
+                </div>
+                <div class="signature">
+                    Issued To:<br>
+                    <div></div>
+                    Signature over printed name<br>
+                    Date: __________
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    const printWindow = window.open('TESDA', 'TESDA', 'width=900,height=700');
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+}
+    
+// Close modal if clicked outside
+window.addEventListener('click', e => {
+    if (e.target.id === 'viewFormModal') closeViewFormModal();
 });
 </script>
 </body>
