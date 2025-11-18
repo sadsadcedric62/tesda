@@ -12,7 +12,7 @@ class DashboardController extends Controller
         // ---------- Dashboard Stats ----------
         $totalTools = DB::table('tools')->count();
         $availableItems = DB::table('tools')->where('status', 'Available')->count();
-        $issuedItems = DB::table('tools')->where('status', 'Borrowed')->count();
+        $issuedItems = DB::table('tools')->where('status', 'Issued')->count();
         $forRepair = DB::table('tools')->whereIn('status', ['For Repair', 'Damaged'])->count();
 
         $lowStockThreshold = 5;
@@ -24,6 +24,8 @@ class DashboardController extends Controller
 
         $inventory = DB::table('tools')
             ->select(
+                'status',
+                'serial_no',
                 'tool_name',
                 'source_of_fund',
                 'classification',
@@ -48,6 +50,13 @@ class DashboardController extends Controller
             )
             ->first();
 
+            //----------Issued Frequency Pie Graph---------
+            $issuedFrequency = DB::table('issued_log')
+            ->join('tools', 'issued_log.serial_no', '=', 'tools.serial_no')
+            ->select('tools.tool_name', DB::raw('COUNT(*) as total'))
+            ->groupBy('tools.tool_name')
+            ->get(); // <-- This returns a Collection
+
         // ---------- USAGE TREND GRAPH DATA ----------
         $usageData = DB::table('tools')
             ->select('tool_name', DB::raw('SUM(usage_count) as total_usage'))
@@ -66,7 +75,8 @@ class DashboardController extends Controller
             'inventory',
             'issuedForms',
             'formSummaryCounts',
-            'usageData'      // <-- ADD THIS TO MAKE GRAPH WORK!
+            'usageData',      // <-- ADD THIS TO MAKE GRAPH WORK!
+            'issuedFrequency'
         ));
     }
 }
