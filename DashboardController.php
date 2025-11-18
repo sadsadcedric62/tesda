@@ -32,7 +32,6 @@ class DashboardController extends Controller
             ->get();
 
         // ---------- Form Records Data ----------
-        // Your issued_summary now contains reference_no — so only select from issued_summary!
         $issuedForms = DB::table('issued_summary')
             ->select('id', 'form_type', 'reference_no', 'created_at', 'student_name', 'item_count', 'status')
             ->orderBy('created_at', 'desc')
@@ -49,6 +48,13 @@ class DashboardController extends Controller
             )
             ->first();
 
+        // ---------- USAGE TREND GRAPH DATA ----------
+        $usageData = DB::table('tools')
+            ->select('tool_name', DB::raw('SUM(usage_count) as total_usage'))
+            ->groupBy('tool_name')
+            ->orderBy('total_usage', 'DESC')
+            ->get();
+
         // ---------- Return view ----------
         return view('dashboard', compact(
             'totalTools',
@@ -59,7 +65,8 @@ class DashboardController extends Controller
             'missingItems',
             'inventory',
             'issuedForms',
-            'formSummaryCounts'
+            'formSummaryCounts',
+            'usageData'      // <-- ADD THIS TO MAKE GRAPH WORK!
         ));
     }
 }
