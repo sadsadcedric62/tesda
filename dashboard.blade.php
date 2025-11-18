@@ -477,17 +477,54 @@
 /* ============================
    DASHBOARD CHARTS
 ============================ */
+// ======== GET DATA FROM CONTROLLER ========
+const usageLabels = @json($usageData->pluck('tool_name'));
+const usageValues = @json($usageData->pluck('total_usage'));
+
+// ======== AUTO-COLOR GENERATOR ========
+function generateColors(count) {
+    let colors = [];
+    for (let i = 0; i < count; i++) {
+        const r = Math.floor(Math.random() * 156) + 100; // 100–255
+        const g = Math.floor(Math.random() * 156) + 100;
+        const b = Math.floor(Math.random() * 156) + 100;
+        colors.push(`rgb(${r}, ${g}, ${b})`);
+    }
+    return colors;
+}
+
+const barColors = generateColors(usageLabels.length);
+
+// ======== CHART ========
 new Chart(document.getElementById("usageChart"), {
-  type: "bar",
-  data: {
-    labels: ["Hammer", "Drill", "Saw", "Wrench"],
-    datasets: [
-      { label: "Category A", data: [35, 20, 40, 10], backgroundColor: "#004aad" },
-      { label: "Category B", data: [15, 30, 20, 25], backgroundColor: "#2ca02c" },
-      { label: "Category C", data: [5, 10, 15, 20], backgroundColor: "#7c3aed" }
-    ]
-  },
-  options: { responsive: true, plugins: { legend: { position: "bottom" } } }
+    type: "bar",
+    data: {
+        labels: usageLabels,
+        datasets: [
+            {
+                label: "Total Usage Count",
+                data: usageValues,
+                backgroundColor: barColors,
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                suggestedMin: 0,
+                suggestedMax: 100,
+                ticks: {
+                    stepSize: 10   // 10, 20, 30, … 100
+                }
+            }
+        }
+    }
 });
 
 new Chart(document.getElementById("issuedChart"), {
@@ -967,7 +1004,15 @@ function printFormModal() {
     printWindow.print();
     printWindow.close();
 }
-    
+
+
+
+
+
+
+
+
+
 // Close modal if clicked outside
 window.addEventListener('click', e => {
     if (e.target.id === 'viewFormModal') closeViewFormModal();
