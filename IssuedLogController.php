@@ -32,23 +32,40 @@ class IssuedLogController extends Controller
      * Return available serial numbers for tools
      */
     public function availableSerials(Request $request)
-    {
-        try {
-            $query = DB::table('tools')->where('status', 'Available');
+{
+    try {
+        $formType = $request->get('form_type', 'ICS'); // optional: pass from frontend
 
-            if ($request->has('property_no') && $request->property_no != '') {
-                $query->where('property_no', $request->property_no);
-            }
+        $query = DB::table('tools')
+            ->join('property_inventory', 'tools.property_no', '=', 'property_inventory.property_no')
+            ->where('tools.status', 'Available');
 
-            $tools = $query->get(['serial_no', 'property_no', 'tool_name']);
-
-            return response()->json($tools);
-
-        } catch (\Exception $e) {
-            \Log::error('Available serials error: '.$e->getMessage());
-            return response()->json(['error' => 'Server error'], 500);
+        if ($request->has('property_no') && $request->property_no != '') {
+            $query->where('tools.property_no', $request->property_no);
         }
+
+        $tools = $query->select(
+            'tools.serial_no',
+            'tools.property_no',
+            'tools.tool_name',
+            'property_inventory.unit_cost'
+        )->get();
+
+        // Filter based on form type
+        $filtered = $tools->filter(function($item) use ($formType) {
+            $cost = floatval($item->unit_cost);
+            if ($formType === 'ICS') return $cost >= 15000 && $cost <= 49000;
+            if ($formType === 'PAR') return $cost >= 50000;
+            return false;
+        })->values();
+
+        return response()->json($filtered);
+
+    } catch (\Exception $e) {
+        \Log::error('Available serials error: '.$e->getMessage());
+        return response()->json(['error' => 'Server error'], 500);
     }
+}
 
     /**
      * Quick check if reference number already exists
@@ -144,4 +161,53 @@ class IssuedLogController extends Controller
         ], 500);
     }
 }
+
+public function view($reference_no)
+{
+    // Get the issued summary record
+    $summary = DB::table('issued_summary')
+        ->where('reference_no', $reference_no)
+        ->first();
+
+    if (!$summary) {
+        return response()->json(['error' => 'Record not found'], 404);
+    }
+
+    // Get all issued logs for this reference
+    $issuedLogs = DB::table('issued_log')
+        ->where('reference_no', $reference_no)
+        ->get();
+
+    $details = [];
+
+    foreach ($issuedLogs as $log) {
+        // Get tool name from tools table
+        $tool = DB::table('tools')
+            ->where('property_no', $log->property_no)
+            ->first();
+
+        // Get unit cost from property_inventory
+        $inventory = DB::table('property_inventory')
+            ->where('property_no', $log->property_no)
+            ->first();
+
+        $details[] = [
+            'property_no' => $log->property_no,
+            'tool_name' => $tool ? $tool->tool_name : 'N/A',
+            'quantity' => 1, // one per serial
+            'unit_cost' => $inventory ? (float)$inventory->unit_cost : 0,
+            'total_cost' => $inventory ? (float)$inventory->unit_cost * 1 : 0,
+            'serial_no' => $log->serial_no
+        ];
+    }
+
+    return response()->json([
+        'issued_to' => $summary->student_name,
+        'form_type' => $summary->form_type,
+        'reference_no' => $summary->reference_no,
+        'details' => $details
+    ]);
+}
+
+
 }
