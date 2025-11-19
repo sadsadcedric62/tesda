@@ -1195,3 +1195,63 @@ th, td {
     font-size: 15px;
     margin-left: 180px;
 }
+
+/* Modal looks like short bond paper */
+#viewFormModal .modal-content {
+    width: 800px; /* typical short bond paper width */
+    max-width: 90%; /* responsive for smaller screens */
+    padding: 30px 40px;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    font-family: "Times New Roman", serif;
+    line-height: 1.5;
+    color: #000;
+}
+
+/* Tables like printed tables */
+#viewFormModal table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+#viewFormModal th, #viewFormModal td {
+    border: 1px solid #000;
+    padding: 6px 10px;
+    text-align: left;
+}
+
+/* Header styling */
+#viewFormModal h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+/* Serial numbers table smaller font */
+#viewFormModal h4 {
+    margin-top: 20px;
+    font-size: 16px;
+}
+
+/* Signature lines */
+#viewFormModal .signature-block {
+    margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+}
+
+#viewFormModal .signature-block div {
+    width: 45%;
+    text-align: center;
+}
+
+#viewFormModal .signature-block .line {
+    border-top: 1px solid #000;
+    margin: 60px auto 10px;
+    width: 80%;
+}
+
