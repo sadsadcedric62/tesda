@@ -34,7 +34,7 @@
           <img src="{{ asset('images/form.png') }}" alt="Form Icon" class="menu-icon">
           Form Records
         </a>
-        <a href="#" data-target="reports">
+        <a href="#" data-target="maintenance">
           <img src="{{ asset('images/maintenance.png') }}" alt="Reports Icon" class="menu-icon">
           Maintenance
         </a>
@@ -342,18 +342,17 @@
         <p>Archive</p>
         <h2>{{ $formSummaryCounts->archived_forms }}</h2>
     </div>
-</div>
+  </div>
 
-  <!-- FORM SECTION --> 
+  <!-- FORM CONTROLS --> 
   <div class="form-controls">
-    
     <button class="sort-btn"><i class="fas fa-filter"></i> Sort by field</button>
     <input type="text" id="formSearchInput" placeholder="Search student or reference number..."
            style="padding:8px 12px; border:1px solid #ccc; border-radius:6px; width:300px; margin-left: 350px;">
     <button class="add-btn"><i class="fas fa-plus"></i> Add New Form</button>
   </div>
 
-  <!-- Table -->
+  <!-- TABLE -->
   <div class="form-table-container">
     <table class="form-table">
       <thead>
@@ -383,99 +382,99 @@
             <td><a href="#">View</a></td>
         </tr>
         @endforeach
-    </tbody>
+      </tbody>
     </table>
   </div>
 
   <!-- ====== Form Type Chooser Modal ====== -->
-<div id="formTypeModal" class="modal-overlay">
-  <div class="modal-content" style="width: 420px;">
-    <span class="close-btn" onclick="closeFormTypeModal()">&times;</span>
-    <h2 style="color:#004aad;text-align:center;">Choose Form Type</h2>
-    <div style="display:flex;gap:20px;justify-content:center;margin-top:20px;">
-      <button class="save-btn" id="chooseIcs">ICS</button>
-      <button class="save-btn" id="choosePar">PAR</button>
+  <div id="formTypeModal" class="modal-overlay">
+    <div class="modal-content" style="width: 420px;">
+      <span class="close-btn" onclick="closeFormTypeModal()">&times;</span>
+      <h2 style="color:#004aad;text-align:center;">Choose Form Type</h2>
+      <div style="display:flex;gap:20px;justify-content:center;margin-top:20px;">
+        <button class="save-btn" id="chooseIcs">ICS</button>
+        <button class="save-btn" id="choosePar">PAR</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ===== View Form Modal ===== -->
-<div id="viewFormModal" class="modal-overlay" style="display:none;">
-  <div class="modal-content" style="width: 800px;">
-    <span class="close-btn" onclick="closeViewFormModal()">&times;</span>
-    <h2 style="text-align:center;color:#004aad;">Form Details</h2>
-    <div class="modal-body" style="margin-top:20px;"></div>
-    <div style="text-align:center; margin:20px 0;">
-      <button class="save-btn" onclick="printFormModal()">🖨️ Print</button>
+  <!-- ===== View Form Modal ===== -->
+  <div id="viewFormModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="width: 800px;">
+      <span class="close-btn" onclick="closeViewFormModal()">&times;</span>
+      <h2 style="text-align:center;color:#004aad;">Form Details</h2>
+      <div class="modal-body" style="margin-top:20px;"></div>
+      <div style="text-align:center; margin:20px 0;">
+        <button class="save-btn" onclick="printFormModal()">🖨️ Print</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ====== Add Form Modal (ISSUE FORM) ====== -->
-<div id="addFormModal" class="modal-overlay">
-  <div class="modal-content">
-    <span class="close-btn" onclick="closeAddFormModal()">&times;</span>
-    <h2 id="addFormTitle" style="text-align:center;color:#004aad;">Add New Form</h2>
+  <!-- ====== Add Form Modal (ISSUE FORM) ====== -->
+  <div id="addFormModal" class="modal-overlay">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeAddFormModal()">&times;</span>
+      <h2 id="addFormTitle" style="text-align:center;color:#004aad;">Add New Form</h2>
 
-    <form id="addForm" onsubmit="submitForm(event)">
-      <input type="hidden" id="form_type_input" name="form_type" value="ICS">
+      <form id="addForm" onsubmit="submitForm(event)">
+        <input type="hidden" id="form_type_input" name="form_type" value="ICS">
 
-      <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
-        <div class="full-width" style="position:relative;">
-          <label>Student Name</label>
-          <input type="text" id="studentSearch" name="student_name" autocomplete="off" placeholder="Type student name..." required>
-          <div id="studentSuggestion" class="suggestion-box"></div>
-        </div>
+        <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="full-width" style="position:relative;">
+            <label>Student Name</label>
+            <input type="text" id="studentSearch" name="student_name" autocomplete="off" placeholder="Type student name..." required>
+            <div id="studentSuggestion" class="suggestion-box"></div>
+          </div>
 
-        <div class="full-width">
-          <label>Property Number</label>
-          <input type="text" id="propertyFilter" placeholder="Enter property number..." autocomplete="off">
-        </div>
+          <div class="full-width">
+            <label>Property Number</label>
+            <input type="text" id="propertyFilter" placeholder="Enter property number..." autocomplete="off">
+          </div>
 
-        <div class="full-width">
-          <label>Available Serial Numbers</label>
+          <div class="full-width">
+            <label>Available Serial Numbers</label>
             <div id="serialList" class="serial-container">
               <div class="placeholder">Type a Property No. to see available items.</div>
             </div>
           </div>
 
+          <div class="full-width">
+            <label>Reference No.</label>
+            <input type="text" id="referenceNo" name="reference_no" required>
+            <div id="refCheck" style="color:red;margin-top:6px;display:none;">Reference already exists.</div>
+          </div>
 
-        <div class="full-width">
-          <label>Reference No.</label>
-          <input type="text" id="referenceNo" name="reference_no" required>
-          <div id="refCheck" style="color:red;margin-top:6px;display:none;">Reference already exists.</div>
+          <div class="full-width">
+            <label>Issued Date</label>
+            <input type="date" id="issuedDate" name="issued_date" required>
+          </div>
+
+          <div class="full-width">
+            <label>Return Date</label>
+            <input type="date" id="returnDate" name="return_date">
+          </div>
         </div>
 
-        <div class="full-width">
-          <label>Issued Date</label>
-          <input type="date" id="issuedDate" name="issued_date" required>
+        <div class="form-buttons" style="margin-top:18px;">
+          <button type="submit" class="save-btn">Save Form</button>
+          <button type="button" class="reset-btn" onclick="closeAddFormModal()">Cancel</button>
         </div>
-
-        <div class="full-width">
-          <label>Return Date</label>
-          <input type="date" id="returnDate" name="return_date">
-        </div>
-
-      <div class="form-buttons" style="margin-top:18px;">
-        <button type="submit" class="save-btn">Save Form</button>
-        <button type="button" class="reset-btn" onclick="closeAddFormModal()">Cancel</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Small styles to ensure suggestion-box inside modal positions correctly -->
-<style>
-  #addFormModal .suggestion-box { position: absolute; left: 0; right: 0; top: 66px; z-index: 1100; }
-</style>
-
-
+      </form>
     </div>
   </div>
-</div>
+
+  <!-- Small styles to ensure suggestion-box inside modal positions correctly -->
+  <style>
+    #addFormModal .suggestion-box { position: absolute; left: 0; right: 0; top: 66px; z-index: 1100; }
+  </style>
+</div> <!-- closes #form -->
+
+<!-- ====== Maintenance Section ====== -->
+<div id="maintenance" class="content-section">
+  <h2>Reports Overview</h2>
 </div>
 
-        <div id="reports" class="content-section"><h2>Reports Overview</h2></div>
+
       </section>
     </main>
   </div>
@@ -909,8 +908,8 @@ document.querySelectorAll('.form-table tbody tr td a').forEach(link => {
                 // Build modal content WITHOUT signature block
                 let html = `
                     <br>
-                    <p><strong>Issued To:</strong> <u>${data.issued_to}</u></p>
-                    <p><strong>Reference No.:</strong> <u>${data.reference_no}</u></p>
+                    <p><strong>Issued To:</strong> ${data.issued_to}</p>
+                    <p><strong>Reference Number:</strong> ${data.reference_no}</p>
                     <table border="1" cellpadding="5" style="width:100%; margin-top:10px;">
                         <thead>
                             <tr>
@@ -1025,7 +1024,7 @@ function printFormModal() {
                 </div>
                 <div class="signature">
                     Issued To:<br>
-                    <div></div>
+                    <div> ${data.issued_to}</div>
                     Signature over printed name<br>
                     Date: __________
                 </div>
@@ -1041,14 +1040,6 @@ function printFormModal() {
     printWindow.print();
     printWindow.close();
 }
-
-
-
-
-
-
-
-
 
 // Close modal if clicked outside
 window.addEventListener('click', e => {
