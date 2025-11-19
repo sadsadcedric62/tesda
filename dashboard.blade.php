@@ -316,9 +316,6 @@
   </div>
 </div>
         <div id="form" class="content-section">
-  <div class="form-header">
-    <h2>Form Summary</h2>
-  </div>
 
   <!-- Summary Section -->
   <div class="form-summary">
@@ -388,15 +385,19 @@
 
   <!-- ====== Form Type Chooser Modal ====== -->
   <div id="formTypeModal" class="modal-overlay">
-    <div class="modal-content" style="width: 420px;">
-      <span class="close-btn" onclick="closeFormTypeModal()">&times;</span>
-      <h2 style="color:#004aad;text-align:center;">Choose Form Type</h2>
-      <div style="display:flex;gap:20px;justify-content:center;margin-top:20px;">
-        <button class="save-btn" id="chooseIcs">ICS</button>
-        <button class="save-btn" id="choosePar">PAR</button>
+  
+    <div class="picker-container">
+      <div class="picker-item" id="chooseIcs">
+        <img src="/icons/form-icon.png" class="picker-icon">
+        <span>GENERATE ICS FORM</span>
+      </div>
+
+      <div class="picker-item" id="choosePar">
+        <img src="/icons/form-icon.png" class="picker-icon">
+        <span>GENERATE PAR FORM</span>
       </div>
     </div>
-  </div>
+    </div>
 
   <!-- ===== View Form Modal ===== -->
   <div id="viewFormModal" class="modal-overlay" style="display:none;">
@@ -686,7 +687,6 @@ document.getElementById('property_no').addEventListener('blur', async function()
       document.getElementById('tool_name').value = data.data.tool_name;
       document.getElementById('classification').value = data.data.classification;
       document.getElementById('source_of_fund').value = data.data.source_of_fund;
-      document.getElementById('date_acquired').value = data.data.date_acquired;
     } else {
       document.getElementById('tool_name').value = '';
       document.getElementById('classification').value = '';
@@ -1040,7 +1040,7 @@ function printFormModal() {
     printWindow.print();
     printWindow.close();
 }
-
+    
 // Close modal if clicked outside
 window.addEventListener('click', e => {
     if (e.target.id === 'viewFormModal') closeViewFormModal();
